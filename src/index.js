@@ -16,12 +16,12 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
   const donut = mode === 'donut', abort = new AbortController(), signal = abort.signal;
   let disposed = false, raf = 0, frameCount = 0, lastTick = 0, dirty = true, running = !matchMedia('(prefers-reduced-motion: reduce)').matches;
   let settings = { ...DEFAULTS }, a = 0.85, b = 0.35, currentFrame, source, sourceKind = 'sample', sourceName = 'Studio still life';
-  let sourceURL, loadVersion = 0, loading = false, record = null, dragDepth = 0, lastSourceTime = -1;
+  let sourceURL, loadVersion = 0, loading = false, record = null, lastSourceTime = -1;
   const pendingURLs = new Set(), downloadURLs = new Set();
   host.innerHTML = `<section class="ascii-app" data-mode="${mode}" aria-label="${donut ? 'ASCII donut kitchen' : 'ASCII media studio'}">
     <header class="ascii-intro"><div><h2>${donut ? 'Freshly rendered.' : 'Every pixel, a character.'}</h2><p>${donut ? 'A little dough. A little math. A lot of spinning.' : 'Drop in a photo or video. Give it a whole new alphabet.'}</p></div><span class="ascii-stamp" aria-hidden="true">${donut ? '(@)' : 'Aa'}</span></header>
     <div class="ascii-layout"><div class="ascii-workspace">
-      ${donut ? '' : `<div class="ascii-upload"><label class="ascii-upload-button">Upload image<input class="ascii-file" type="file" accept="image/*" aria-label="Upload image"></label><label class="ascii-upload-button">Upload video<input class="ascii-file" type="file" accept="video/*" aria-label="Upload video"></label><button type="button" data-action="sample">Try a still life</button><button type="button" data-action="sample-video">Try a video</button><p>Or drop a file here. Files stay on your device. Up to 250 MB.</p></div>`}
+      ${donut ? '' : `<div class="ascii-upload"><button type="button" class="ascii-upload-button" data-action="upload-image">Upload image</button><button type="button" class="ascii-upload-button" data-action="upload-video">Upload video</button><input class="ascii-file" data-upload="image" type="file" accept="image/*" aria-label="Upload image" hidden><input class="ascii-file" data-upload="video" type="file" accept="video/*" aria-label="Upload video" hidden><button type="button" data-action="sample">Try a still life</button><button type="button" data-action="sample-video">Try a video</button><p>Or drop a file here. Files stay on your device. Up to 250 MB.</p></div>`}
       <div class="ascii-stage" data-stage>
         <div class="ascii-stage-bar"><span data-source-name>${donut ? 'Donut kitchen' : 'Studio still life'}</span><div>${donut ? '' : '<button type="button" data-action="source" aria-pressed="false">Show original</button>'}<button type="button" data-action="play">${donut ? (running ? 'Pause spin' : 'Spin donut') : 'Play video'}</button></div></div>
         <div class="ascii-screen"><canvas data-ascii-canvas role="img" aria-label="${donut ? 'Live shaded donut rendered with ASCII characters' : 'Media converted into ASCII characters'}"></canvas><canvas data-original-canvas role="img" aria-label="Original media for comparison" hidden></canvas></div>
@@ -219,6 +219,7 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
   listen(root,'click',async event=>{
     const button=event.target.closest('button');if(!button)return;
     const action=button.dataset.action;
+    if(action==='upload-image'||action==='upload-video')$(`[data-upload="${action.slice(7)}"]`).click();
     if(button.dataset.preset){setPreset(button.dataset.preset);return;}
     if(action==='play') {
       if(donut)running=!running;
@@ -238,10 +239,14 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
   listen($('.ascii-text-details'),'toggle',()=>{if(currentFrame&&$('.ascii-text-details').open)$('[data-text]').textContent=toText(currentFrame);});
   if(!donut){
     root.querySelectorAll('.ascii-file').forEach(input=>listen(input,'change',event=>{upload(event.target.files[0]);event.target.value='';}));
-    listen(root,'dragover',event=>{event.preventDefault();});
-    listen(root,'dragenter',event=>{event.preventDefault();dragDepth++;root.classList.add('ascii-dragging');});
-    listen(root,'dragleave',()=>{if(--dragDepth<=0)root.classList.remove('ascii-dragging');});
-    listen(root,'drop',event=>{event.preventDefault();dragDepth=0;root.classList.remove('ascii-dragging');upload(event.dataTransfer.files[0]);});
+    const fileDrag=event=>Array.from(event.dataTransfer?.types || []).includes('Files');
+    const clearDrop=()=>root.classList.remove('ascii-dragging');
+    listen(root,'dragover',event=>{if(fileDrag(event)){event.preventDefault();event.dataTransfer.dropEffect='copy';}});
+    listen(root,'dragenter',event=>{if(fileDrag(event)&&!record){event.preventDefault();root.classList.add('ascii-dragging');}});
+    listen(root,'dragleave',event=>{if(!event.relatedTarget || !root.contains(event.relatedTarget))clearDrop();});
+    listen(root,'drop',event=>{clearDrop();if(fileDrag(event)){event.preventDefault();upload(event.dataTransfer.files[0]);}});
+    listen(window,'drop',clearDrop);listen(window,'dragend',clearDrop);listen(window,'blur',clearDrop);
+    listen(window,'keydown',event=>{if(event.key==='Escape')clearDrop();});
     makeSample();
   }
   listen(document,'visibilitychange',()=>{lastTick=0;if(document.hidden&&record){stopRecording(true);fail('Export canceled because the tab was hidden. Keep it visible while recording.');}});

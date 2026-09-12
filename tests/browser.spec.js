@@ -36,3 +36,10 @@ for(const width of [1440,390,320])test(`both playgrounds fit at ${width}px and r
  await page.setViewportSize({width,height:900});await page.emulateMedia({reducedMotion:'reduce'});
  for(const mode of ['donut','studio']){await ready(page,mode);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if(mode==='donut')await expect(page.getByRole('button',{name:'Spin donut',exact:true})).toBeVisible();}
 });
+
+test('upload buttons open the matching picker and file-only drop feedback clears',async({page})=>{
+ await ready(page);
+ for(const kind of ['image','video']){const chooser=page.waitForEvent('filechooser');await page.getByRole('button',{name:`Upload ${kind}`,exact:true}).click();expect(await (await chooser).element().getAttribute('accept')).toBe(`${kind}/*`);}
+ await page.locator('.ascii-upload').dispatchEvent('dragenter',{dataTransfer:await page.evaluateHandle(()=>{const d=new DataTransfer();d.setData('text/plain','text');return d;})});await expect(page.locator('.ascii-app')).not.toHaveClass(/ascii-dragging/);
+ const transfer=await page.evaluateHandle(()=>{const d=new DataTransfer();d.items.add(new File(['fixture'],'example.png',{type:'image/png'}));return d;});await page.locator('.ascii-upload').dispatchEvent('dragenter',{dataTransfer:transfer});await expect(page.locator('.ascii-app')).toHaveClass(/ascii-dragging/);await page.keyboard.press('Escape');await expect(page.locator('.ascii-app')).not.toHaveClass(/ascii-dragging/);
+});
