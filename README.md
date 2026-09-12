@@ -20,7 +20,7 @@ Open the printed localhost URL. Use **Donut kitchen** and **Media studio** in th
 
 ## Media and exports
 
-Choose or drop a browser-decodable image/video up to 250 MB. PNG, JPEG, WebP, MP4, and WebM are useful choices; exact codec support depends on the browser. Animated image files are treated as images; use a video for playback and video export.
+Use **Upload image** or **Upload video**, or drop a browser-decodable image/video up to 250 MB. PNG, JPEG, WebP, MP4, and WebM are useful choices; exact codec support depends on the browser. Animated image files are treated as images; use a video for playback and video export.
 
 - Video playback, pause, and scrubbing update the ASCII preview. Changing settings also updates paused frames.
 - **Save PNG**, **Save text**, and **Copy text** use the current ASCII frame, even while viewing the original comparison.

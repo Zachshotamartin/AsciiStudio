@@ -12,14 +12,14 @@ test('donut animates, pauses, responds to dough and palettes, and exports ASCII 
 });
 test('real image upload, paused settings, custom alphabet, original comparison, and PNG export',async({page})=>{
  await ready(page);const png=await page.locator('[data-original-canvas]').evaluate(()=>{const c=document.createElement('canvas');c.width=64;c.height=32;const x=c.getContext('2d');x.fillStyle='black';x.fillRect(0,0,64,32);x.fillStyle='white';x.fillRect(32,0,32,32);return c.toDataURL().split(',')[1];});
- await page.getByLabel('Upload image or video').setInputFiles({name:'two-tones.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});await expect(page.locator('[data-source-name]')).toHaveText('two-tones.png');
+ await page.getByLabel('Upload image',{exact:true}).setInputFiles({name:'two-tones.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});await expect(page.locator('[data-source-name]')).toHaveText('two-tones.png');
  const before=await hash(page);await page.getByLabel('Invert character density').check();await expect.poll(()=>hash(page)).not.toBe(before);
  await page.getByLabel('Character set',{exact:true}).selectOption('custom');await page.getByLabel('Custom characters',{exact:true}).fill(' XO');await page.locator('.ascii-text-details summary').click();await expect(page.locator('[data-text]')).toContainText('O');
  await page.getByRole('button',{name:'Show original',exact:true}).click();await expect(page.locator('[data-original-canvas]')).toBeVisible();await page.getByRole('button',{name:'Show ASCII',exact:true}).click();
  const download=page.waitForEvent('download');await page.getByRole('button',{name:'Save PNG',exact:true}).click();const bytes=await readFile(await(await download).path());expect(bytes.subarray(1,4).toString()).toBe('PNG');
 });
 test('uploaded video plays, seeks, recolors while paused, and exports a decodable changing clip',async({page})=>{
- await ready(page);await page.getByLabel('Upload image or video').setInputFiles('public/examples/motion.webm');await expect(page.locator('[data-source-name]')).toHaveText('motion.webm');
+ await ready(page);await page.getByLabel('Upload video',{exact:true}).setInputFiles('public/examples/motion.webm');await expect(page.locator('[data-source-name]')).toHaveText('motion.webm');
  const start=await hash(page);await page.getByRole('button',{name:'Play video',exact:true}).click();await expect.poll(()=>hash(page)).not.toBe(start);await page.getByRole('button',{name:'Pause video',exact:true}).click();
  await change(page,'Video position',1);const paused=await hash(page);await change(page,'Contrast',2.5);await expect.poll(()=>hash(page)).not.toBe(paused);
  await change(page,'Video position',0);
@@ -29,7 +29,7 @@ test('uploaded video plays, seeks, recolors while paused, and exports a decodabl
 });
 test('video cancellation and invalid files recover; replacing a source retains new controls',async({page})=>{
  await ready(page);await page.getByRole('button',{name:'Try a video',exact:true}).click();await expect(page.locator('[data-source-name]')).toHaveText('Color parade');await page.getByRole('button',{name:'Export video',exact:true}).click();await page.getByRole('button',{name:'Cancel export',exact:true}).click();await expect(page.locator('.ascii-status')).toContainText('canceled');
- await page.getByLabel('Upload image or video').setInputFiles({name:'broken.png',mimeType:'image/png',buffer:Buffer.from('not an image')});await expect(page.getByRole('alert')).toContainText('cannot decode');
+ await page.getByLabel('Upload image',{exact:true}).setInputFiles({name:'broken.png',mimeType:'image/png',buffer:Buffer.from('not an image')});await expect(page.getByRole('alert')).toContainText('cannot decode');
  await page.getByRole('button',{name:'Try a still life',exact:true}).click();await expect(page.getByRole('alert')).toBeHidden();await expect(page.locator('[data-source-name]')).toHaveText('Studio still life');await change(page,'Detail',80);await expect(page.locator('[data-ascii-canvas]')).toHaveAttribute('data-columns','80');
 });
 for(const width of [1440,390,320])test(`both playgrounds fit at ${width}px and respect reduced motion`,async({page})=>{

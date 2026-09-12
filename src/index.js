@@ -21,7 +21,7 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
   host.innerHTML = `<section class="ascii-app" data-mode="${mode}" aria-label="${donut ? 'ASCII donut kitchen' : 'ASCII media studio'}">
     <header class="ascii-intro"><div><h2>${donut ? 'Freshly rendered.' : 'Every pixel, a character.'}</h2><p>${donut ? 'A little dough. A little math. A lot of spinning.' : 'Drop in a photo or video. Give it a whole new alphabet.'}</p></div><span class="ascii-stamp" aria-hidden="true">${donut ? '(@)' : 'Aa'}</span></header>
     <div class="ascii-layout"><div class="ascii-workspace">
-      ${donut ? '' : `<div class="ascii-upload"><label class="ascii-upload-button">Choose image or video<input class="ascii-file" type="file" accept="image/*,video/*" aria-label="Upload image or video"></label><button type="button" data-action="sample">Try a still life</button><button type="button" data-action="sample-video">Try a video</button><p>Or drop a file here. Files stay on your device. Up to 250 MB.</p></div>`}
+      ${donut ? '' : `<div class="ascii-upload"><label class="ascii-upload-button">Upload image<input class="ascii-file" type="file" accept="image/*" aria-label="Upload image"></label><label class="ascii-upload-button">Upload video<input class="ascii-file" type="file" accept="video/*" aria-label="Upload video"></label><button type="button" data-action="sample">Try a still life</button><button type="button" data-action="sample-video">Try a video</button><p>Or drop a file here. Files stay on your device. Up to 250 MB.</p></div>`}
       <div class="ascii-stage" data-stage>
         <div class="ascii-stage-bar"><span data-source-name>${donut ? 'Donut kitchen' : 'Studio still life'}</span><div>${donut ? '' : '<button type="button" data-action="source" aria-pressed="false">Show original</button>'}<button type="button" data-action="play">${donut ? (running ? 'Pause spin' : 'Spin donut') : 'Play video'}</button></div></div>
         <div class="ascii-screen"><canvas data-ascii-canvas role="img" aria-label="${donut ? 'Live shaded donut rendered with ASCII characters' : 'Media converted into ASCII characters'}"></canvas><canvas data-original-canvas role="img" aria-label="Original media for comparison" hidden></canvas></div>
@@ -237,7 +237,7 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
   });
   listen($('.ascii-text-details'),'toggle',()=>{if(currentFrame&&$('.ascii-text-details').open)$('[data-text]').textContent=toText(currentFrame);});
   if(!donut){
-    listen($('.ascii-file'),'change',event=>{upload(event.target.files[0]);event.target.value='';});
+    root.querySelectorAll('.ascii-file').forEach(input=>listen(input,'change',event=>{upload(event.target.files[0]);event.target.value='';}));
     listen(root,'dragover',event=>{event.preventDefault();});
     listen(root,'dragenter',event=>{event.preventDefault();dragDepth++;root.classList.add('ascii-dragging');});
     listen(root,'dragleave',()=>{if(--dragDepth<=0)root.classList.remove('ascii-dragging');});
