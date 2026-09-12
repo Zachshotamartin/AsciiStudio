@@ -24,10 +24,10 @@ Choose or drop a browser-decodable image/video up to 250 MB. PNG, JPEG, WebP, MP
 
 - Video playback, pause, and scrubbing update the ASCII preview. Changing settings also updates paused frames.
 - **Save PNG**, **Save text**, and **Copy text** use the current ASCII frame, even while viewing the original comparison.
-- **Export video clip** records from the current video position for up to **30 seconds**, or until the source ends. Move the playhead to choose another section. This is a real-time, silent export, not a background transcoder or a complete long-video conversion.
+- **Export video** records all remaining video from the playhead, or a chosen 6-, 15-, or 30-second clip. Scrub to the beginning to convert the whole video. Exports run in real time and contain no audio. Encoded output is capped at 256 MB; reduce Detail or choose a shorter clip if needed.
 - The donut records six seconds; it is not guaranteed to be a seamless loop.
 - Video export uses a supported MediaRecorder WebM or MP4 format. Keep the tab visible. Canceling, leaving the page, or hiding the tab releases the recording; a stalled source triggers a timeout. PNG and text remain available when the browser has no compatible video encoder.
-- Character cells are 6 × 12 pixels. Detail is 40–180 columns in the UI; portrait rows are capped at 150. Extreme aspect ratios are limited by that grid budget.
+- Character cells are 6 × 12 pixels. Detail is 40–180 columns in the UI; portrait rows are capped at 150, reducing columns when needed to preserve the image proportions.
 
 All uploaded media stays on the device. No upload endpoint, analytics, account, cloud model, or network conversion is used. Object URLs, media playback, animation frames, and recording streams are released when the mounted app is disposed.
 

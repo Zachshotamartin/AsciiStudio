@@ -27,9 +27,9 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
         <div class="ascii-screen"><canvas data-ascii-canvas role="img" aria-label="${donut ? 'Live shaded donut rendered with ASCII characters' : 'Media converted into ASCII characters'}"></canvas><canvas data-original-canvas role="img" aria-label="Original media for comparison" hidden></canvas></div>
         <div class="ascii-readout"><span data-grid>Preparing characters…</span><span data-state>${donut ? 'Made of math' : 'Sample illustration'}</span></div>
       </div>
-      ${donut ? '' : `<div class="ascii-timeline" hidden><label><span>Video position <output data-time>0:00 / 0:00</output></span><input data-seek type="range" min="0" max="1" step="0.01" value="0" aria-label="Video position"></label></div>`}
-      <div class="ascii-export"><button type="button" data-action="png">Save PNG</button><button type="button" data-action="text">Save text</button><button type="button" data-action="copy">Copy text</button><button type="button" data-action="record">${donut ? 'Record 6-second spin' : 'Export video clip'}</button><button type="button" data-action="cancel" hidden>Cancel export</button></div>
-      <p class="ascii-export-note">${donut ? 'Save the current frame, or record six seconds of spinning.' : 'Video export starts at the playhead, runs for up to 30 seconds, and has no audio. Keep this tab visible.'}</p>
+      ${donut ? '' : `<div class="ascii-timeline" hidden><label><span>Video position <output data-time>0:00 / 0:00</output></span><input data-seek type="range" min="0" max="1" step="0.01" value="0" aria-label="Video position"></label><label class="ascii-field"><span>Export length</span><select data-duration aria-label="Export length"><option value="remaining">All remaining video</option><option value="6">6-second clip</option><option value="15">15-second clip</option><option value="30">30-second clip</option></select></label></div>`}
+      <div class="ascii-export"><button type="button" data-action="png">Save PNG</button><button type="button" data-action="text">Save text</button><button type="button" data-action="copy">Copy text</button><button type="button" data-action="record">${donut ? 'Record 6-second spin' : 'Export video'}</button><button type="button" data-action="cancel" hidden>Cancel export</button></div>
+      <p class="ascii-export-note">${donut ? 'Save the current frame, or record six seconds of spinning.' : 'Video export starts at the playhead and has no audio. Choose the whole remaining video or a short clip. Keep this tab visible.'}</p>
       <p class="ascii-status" role="status" aria-live="polite">${donut ? 'Try a recipe, then make it yours.' : 'Start with the sample, or bring your own pixels.'}</p>
       <p class="ascii-error" role="alert" hidden></p>
     </div><aside class="ascii-controls" aria-label="ASCII customization">
@@ -158,7 +158,7 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
     status(kind==='text'?'A fresh sheet of ASCII text, ready to save.':'Your current ASCII frame is ready as a PNG.');
   }
   function lock(locked) {
-    root.querySelectorAll('.ascii-controls input,.ascii-controls select,.ascii-controls button,.ascii-upload button,.ascii-file,[data-action="play"],[data-seek],[data-action="record"]').forEach(el=>el.disabled=locked);
+    root.querySelectorAll('.ascii-controls input,.ascii-controls select,.ascii-controls button,.ascii-upload button,.ascii-file,[data-action="play"],[data-seek],[data-duration],[data-action="record"]').forEach(el=>el.disabled=locked);
     $('[data-action="cancel"]').hidden=!locked;
   }
   function stopRecording(cancel=false) {
@@ -173,7 +173,8 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
     if(!mime||!canvas.captureStream){fail('Video export is unavailable in this browser. PNG and text still work; try a current Chrome, Firefox, or Safari for video.');return;}
     if(!donut&&sourceKind!=='video')return;
     const start=donut?0:source.currentTime;
-    const duration=donut?6:Math.min(30,source.duration-start);
+    const limit=donut?6:$('[data-duration]').value;
+    const duration=donut?6:Math.min(limit==='remaining'?Infinity:Number(limit),source.duration-start);
     if(duration<0.1){fail('Move the video playhead back before exporting.');return;}
     let stream;
     try {
@@ -181,7 +182,8 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
       const recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:4500000});
       const chunks=[],session={recorder,stream,cancel:false,start,duration,started:performance.now(),wasRunning:running,wasPaused:sourceKind==='video'?source.paused:true};
       record=session;lock(true);running=true;
-      recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+      let recordedBytes=0;
+      recorder.ondataavailable=e=>{if(e.data.size){chunks.push(e.data);recordedBytes+=e.data.size;if(recordedBytes>256*1024*1024&&!session.cancel){session.cancel=true;stopRecording(true);fail('The export exceeded 256 MB. Choose a shorter clip or reduce Detail.');}}};
       recorder.onerror=()=>{session.cancel=true;fail('The browser could not finish this export. Try a shorter clip.');stopRecording(true);};
       recorder.onstop=()=>{
         stream.getTracks().forEach(track=>track.stop());clearTimeout(session.watchdog);

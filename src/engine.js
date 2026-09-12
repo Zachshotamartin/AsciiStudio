@@ -7,7 +7,8 @@ export function cleanRamp(value) {
 }
 export function gridSize(width, height, columns = 120) {
   if (!(width > 0 && height > 0)) throw new Error('The source has no readable dimensions.');
-  const cols = Math.round(clamp(Number(columns) || 120, 32, 200));
+  const requested = Math.round(clamp(Number(columns) || 120, 32, 200));
+  const cols = Math.max(1, Math.min(requested, Math.floor(300 * width / height)));
   // A character cell is 6 by 12 pixels. Cap portrait rows to bound work and exports.
   return { cols, rows: Math.round(clamp(cols * height / width * 0.5, 4, 150)) };
 }
