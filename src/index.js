@@ -1,3 +1,4 @@
+import { restoreSettings, saveSettings, settingsLink } from './settings.js';
 import { randomizeSettings } from './randomize.js';
 import { RAMPS, cleanRamp, gridSize, imageToAscii, donutFrame, renderAscii, toText, clamp } from './engine.js';
 import './style.css';
@@ -16,7 +17,9 @@ const timeLabel = value => `${Math.floor(value / 60)}:${String(Math.floor(value 
 export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } = {}) {
   const donut = mode === 'donut', abort = new AbortController(), signal = abort.signal;
   let disposed = false, raf = 0, frameCount = 0, lastTick = 0, dirty = true, running = !matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let settings = { ...DEFAULTS }, a = 0.85, b = 0.35, currentFrame, source, sourceKind = 'sample', sourceName = 'Studio still life';
+  const restored = restoreSettings(DEFAULTS, mode, location.href);
+  let surpriseSnapshot = null;
+  let settings = restored.settings, a = 0.85, b = 0.35, currentFrame, source, sourceKind = 'sample', sourceName = 'Studio still life';
   let sourceURL, loadVersion = 0, loading = false, record = null, lastSourceTime = -1;
   const pendingURLs = new Set(), downloadURLs = new Set();
   host.innerHTML = `<section class="ascii-app" data-mode="${mode}" aria-label="${donut ? 'ASCII donut kitchen' : 'ASCII media studio'}">
@@ -38,7 +41,8 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
       ${donut ? `<fieldset><legend>In the mixing bowl</legend>${range('tube','Dough thickness',0.25,1,0.05)}${range('speed','Spin speed',-2,2,0.1,'Negative values reverse the spin.')}${range('tumble','Tumble',0,2,0.1)}${range('zoom','Serving size',0.6,1.25,0.05)}${range('light','Light direction',-3,3,0.1)}${checkbox('sprinkles','Rainbow sprinkles')}</fieldset>` : `<fieldset><legend>Develop the picture</legend>${range('contrast','Contrast',0.2,3,0.05)}${range('brightness','Brightness',-0.5,0.5,0.05)}${range('gamma','Shadow lift',0.3,3,0.1)}${checkbox('edges','Outline mode')}${checkbox('invert','Invert character density')}</fieldset>`}
       <fieldset><legend>The alphabet department</legend>${range('columns','Detail',40,180,10,'More columns, smaller characters.')}<label class="ascii-field"><span>Character set</span><select data-ramp aria-label="Character set"><option value="classic">Classic · .:-=+*#%@</option><option value="soft">Soft ink · .,:;ox%#@</option><option value="binary">Binary · 01</option><option value="bubbles">Bubbles · .oO@</option><option value="blocks">Bold · .-=+#@</option><option value="custom">My own alphabet</option></select></label><label class="ascii-field ascii-custom" hidden><span>Custom characters</span><input data-custom type="text" maxlength="64" value=" .:-=+*#%@" aria-label="Custom characters" spellcheck="false"><small>2–64 printable ASCII characters, light to dense. Spaces count.</small></label></fieldset>
       <fieldset><legend>${donut ? 'Choose your glaze' : 'Ink & paper'}</legend><label class="ascii-field"><span>Color treatment</span><select data-setting="color" aria-label="Color treatment"><option value="mono">One-color ink</option><option value="source">${donut ? 'Strawberry frosting' : 'Original colors'}</option><option value="rainbow">Rainbow arcade</option></select></label><div class="ascii-colors"><label>Ink<input type="color" data-setting="ink" aria-label="Ink color"><input type="text" data-hex="ink" aria-label="Ink hex code" maxlength="7" spellcheck="false"></label><label>Paper<input type="color" data-setting="paper" aria-label="Paper color"><input type="text" data-hex="paper" aria-label="Paper hex code" maxlength="7" spellcheck="false"></label></div></fieldset>
-      <div class="ascii-control-actions"><button type="button" data-action="surprise">Surprise me</button><button type="button" data-action="reset">Reset settings</button></div>
+      <div class="ascii-control-actions"><button type="button" data-action="surprise">Surprise me</button><button type="button" data-action="undo-surprise" disabled>Undo surprise</button><button type="button" data-action="reset">Reset settings</button></div>
+      <div class="ascii-settings-share"><button type="button" data-action="share-settings">Copy settings link</button><p data-settings-note>Settings save on this device. Links share the settings, not your files.</p><label hidden data-share-fallback>Settings link<input type="text" readonly data-share-url aria-label="Settings link"></label></div>
     </aside></div>
     <details class="ascii-text-details"><summary>Read the current ASCII frame as text</summary><pre data-text tabindex="0" aria-label="Current ASCII frame as text"></pre></details>
   </section>`;
@@ -48,7 +52,14 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
   const status = message => { if (!disposed) $('.ascii-status').textContent = message; };
   const fail = message => { if (!disposed) { $('.ascii-error').hidden = !message; $('.ascii-error').textContent = message; } };
   const listen = (target, type, handler) => target.addEventListener(type, handler, { signal });
+  function persistSettings() {
+    const saved = saveSettings(settings, mode, DEFAULTS);
+    $('[data-settings-note]').textContent = saved ? 'Settings saved on this device. Links share the settings, not your files.' : 'Device storage is unavailable. Copy a settings link to keep this combination.';
+    $('[data-share-fallback]').hidden = true;
+    $('[data-action="undo-surprise"]').disabled = !surpriseSnapshot || Boolean(record);
+  }
   function syncControls() {
+    persistSettings();
     for (const el of root.querySelectorAll('[data-setting]')) {
       const value = settings[el.dataset.setting];
       if (el.type === 'checkbox') el.checked = value; else el.value = value;
@@ -161,6 +172,7 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
   function lock(locked) {
     root.querySelectorAll('.ascii-controls input,.ascii-controls select,.ascii-controls button,.ascii-upload button,.ascii-file,[data-action="play"],[data-seek],[data-duration],[data-action="record"]').forEach(el=>el.disabled=locked);
     $('[data-action="cancel"]').hidden=!locked;
+    $('[data-action="undo-surprise"]').disabled=locked || !surpriseSnapshot;
   }
   function stopRecording(cancel=false) {
     if(!record)return;
@@ -209,13 +221,13 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
     if(el.matches('[data-custom]')) {
       const value=el.value;
       if(value.length<2||/[^\x20-\x7e]/.test(value)){el.setCustomValidity('Use 2–64 printable ASCII characters.');fail('Custom characters need 2–64 printable ASCII characters.');return;}
-      el.setCustomValidity('');fail('');settings.ramp=cleanRamp(value);clearPreset();dirty=true;
+      el.setCustomValidity('');fail('');settings.ramp=cleanRamp(value);clearPreset();persistSettings();dirty=true;
     }
     if(el.matches('[data-seek]')&&sourceKind==='video'){source.currentTime=Number(el.value);dirty=true;}
   });
   listen($('[data-ramp]'),'change',event=>{
     const value=event.target.value;$('.ascii-custom').hidden=value!=='custom';
-    if(value==='custom'){$('[data-custom]').focus();settings.ramp=cleanRamp($('[data-custom]').value);}else settings.ramp=RAMPS[value];clearPreset();dirty=true;
+    if(value==='custom'){$('[data-custom]').focus();settings.ramp=cleanRamp($('[data-custom]').value);}else settings.ramp=RAMPS[value];clearPreset();persistSettings();dirty=true;
   });
   listen(root,'click',async event=>{
     const button=event.target.closest('button');if(!button)return;
@@ -234,8 +246,18 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
     if(action==='copy'){draw();try{await navigator.clipboard.writeText(toText(currentFrame));status('Copied. Paste a little ASCII into the world.');}catch{fail('Clipboard access is unavailable. Use Save text instead.');}}
     if(action==='record')startRecording();
     if(action==='cancel')stopRecording(true);
-    if(action==='reset'){settings={...DEFAULTS};a=0.85;b=0.35;setPreset('terminal');fail('');status('Back to the original recipe.');}
-    if(action==='surprise'){settings=randomizeSettings(settings,{donut});clearPreset();syncControls();status('Fresh random settings. Make them yours.');}
+    if(action==='reset'){surpriseSnapshot=null;settings={...DEFAULTS};a=0.85;b=0.35;setPreset('terminal');fail('');status('Back to the original recipe.');}
+    if(action==='undo-surprise' && surpriseSnapshot){
+      settings={...surpriseSnapshot.settings};
+      root.querySelectorAll('[data-preset]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.preset===surpriseSnapshot.preset)));
+      surpriseSnapshot=null;syncControls();status('Your previous combination is back.');
+    }
+    if(action==='share-settings'){
+      const url=settingsLink(settings,mode,DEFAULTS,location.href);
+      try{await navigator.clipboard.writeText(url);status('Settings link copied. Your files stay on your device.');}
+      catch{if(!disposed){$('[data-share-fallback]').hidden=false;$('[data-share-url]').value=url;$('[data-share-url]').focus();$('[data-share-url]').select();status('Copy the selected settings link.');}}
+    }
+    if(action==='surprise'){surpriseSnapshot={settings:{...settings},preset:root.querySelector('[data-preset][aria-pressed="true"]')?.dataset.preset};settings=randomizeSettings(settings,{donut});clearPreset();syncControls();status('Fresh random settings. Make them yours.');}
   });
   listen($('.ascii-text-details'),'toggle',()=>{if(currentFrame&&$('.ascii-text-details').open)$('[data-text]').textContent=toText(currentFrame);});
   if(!donut){
@@ -266,6 +288,7 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
     if(dirty)draw();
     if(record){const elapsed=donut?(now-record.started)/1000:source.currentTime-record.start;status(`Recording ASCII · ${Math.min(100,Math.round(elapsed/record.duration*100))}%`);if(elapsed>=record.duration)stopRecording();}
   }
+  if(restored.source){clearPreset();status(restored.source==='link'?'Shared settings loaded. Bring your own pixels.':'Your saved settings are back.');}
   syncControls();updatePlayback();draw();raf=requestAnimationFrame(tick);
   return {
     dispose(){disposed=true;loadVersion++;abort.abort();cancelAnimationFrame(raf);if(record){clearTimeout(record.watchdog);record.cancel=true;if(record.recorder.state!=='inactive')record.recorder.stop();record.stream.getTracks().forEach(t=>t.stop());}releaseSource();for(const url of [...pendingURLs,...downloadURLs])URL.revokeObjectURL(url);host.replaceChildren();},

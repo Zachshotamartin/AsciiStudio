@@ -60,3 +60,24 @@ for (const mode of ['donut', 'studio']) test(`Surprise me makes fresh settings w
  await expect(page.getByRole('button',{name:'Terminal',exact:true})).toHaveAttribute('aria-pressed','true');
  await expect(page.locator('[data-setting=ink]')).toHaveValue('#b9f4ba');
 });
+
+for(const mode of ['studio','donut'])test(`saved settings, share links, and undo keep the exact ${mode} combination`,async({page,browser})=>{
+ await page.emulateMedia({reducedMotion:'reduce'});await ready(page,mode);
+ await change(page,'Detail',80);
+ const frame=await page.locator('[data-ascii-canvas]').getAttribute('data-frame');
+ await page.getByLabel('Ink hex code',{exact:true}).fill('#bbaaff');
+ await expect(page.locator('[data-ascii-canvas]')).not.toHaveAttribute('data-frame',frame);
+ const before=await hash(page);
+ await page.getByRole('button',{name:'Surprise me',exact:true}).click();
+ await expect.poll(()=>hash(page)).not.toBe(before);
+ await page.getByRole('button',{name:'Undo surprise',exact:true}).click();
+ await expect.poll(()=>hash(page)).toBe(before);
+ await expect(page.getByRole('button',{name:'Undo surprise',exact:true})).toBeDisabled();
+ await page.reload();await expect(page.locator('[data-setting=columns]')).toHaveValue('80');await expect(page.locator('[data-setting=ink]')).toHaveValue('#bbaaff');
+ await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{value:{writeText:async()=>{throw new Error('denied');}},configurable:true});});
+ await page.getByRole('button',{name:'Copy settings link',exact:true}).click();
+ const url=await page.getByRole('textbox',{name:'Settings link',exact:true}).inputValue();
+ const context=await browser.newContext({reducedMotion:'reduce'});const shared=await context.newPage();await shared.goto(url);
+ await expect(shared.locator('[data-setting=columns]')).toHaveValue('80');await expect(shared.locator('[data-setting=ink]')).toHaveValue('#bbaaff');await expect(shared.locator('.ascii-status')).toContainText('Shared settings loaded');
+ await context.close();
+});
