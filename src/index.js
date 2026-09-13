@@ -1,3 +1,4 @@
+import { randomizeSettings } from './randomize.js';
 import { RAMPS, cleanRamp, gridSize, imageToAscii, donutFrame, renderAscii, toText, clamp } from './engine.js';
 import './style.css';
 
@@ -234,7 +235,7 @@ export function mountAscii(host, { mode = 'studio', assetBase = '/examples/' } =
     if(action==='record')startRecording();
     if(action==='cancel')stopRecording(true);
     if(action==='reset'){settings={...DEFAULTS};a=0.85;b=0.35;setPreset('terminal');fail('');status('Back to the original recipe.');}
-    if(action==='surprise'){const keys=Object.keys(PRESETS);setPreset(keys[Math.floor(Math.random()*keys.length)]);settings.columns=[70,100,140,160][Math.floor(Math.random()*4)];if(donut){settings.tube=0.3+Math.random()*0.6;settings.speed=0.3+Math.random()*1.5;settings.tumble=Math.random();}else{settings.contrast=0.8+Math.random()*1.1;settings.gamma=0.7+Math.random()*0.9;}syncControls();status('A new recipe. Adjust to taste.');}
+    if(action==='surprise'){settings=randomizeSettings(settings,{donut});clearPreset();syncControls();status('Fresh random settings. Make them yours.');}
   });
   listen($('.ascii-text-details'),'toggle',()=>{if(currentFrame&&$('.ascii-text-details').open)$('[data-text]').textContent=toText(currentFrame);});
   if(!donut){

@@ -5,7 +5,7 @@ Two browser playgrounds, one small rendering engine:
 - **Donut kitchen** renders a shaded 3D torus as actual ASCII characters. Change its dough thickness, spin, tumble, lighting, size, alphabet, frosting, and sprinkles. Save frames or record a six-second spin.
 - **Media studio** converts uploaded images and videos into character art. Customize detail, contrast, brightness, shadow lift, edge outlines, character density, custom printable ASCII alphabets, original colors, rainbow colors, or editable ink and paper colors.
 
-Terminal, Candy shop, Newsprint, and Arcade presets give you starting points. Surprise me remixes the settings; Reset restores the defaults.
+Terminal, Candy shop, Newsprint, and Arcade presets give you starting points. Surprise me generates independent colors, character sets, detail, and picture or donut settings instead of choosing a preset. No mood stays selected after a surprise; Reset restores the defaults.
 
 ## Run
 
