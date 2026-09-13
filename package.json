@@ -4,9 +4,30 @@
   "description": "A spinning ASCII donut and a local image/video-to-ASCII playground.",
   "type": "module",
   "license": "MIT",
-  "exports": { ".": "./src/index.js", "./engine": "./src/engine.js", "./style.css": "./src/style.css" },
-  "files": ["src", "public", "README.md", "LICENSE"],
-  "scripts": { "dev": "vite --host 127.0.0.1", "build": "vite build", "preview": "vite preview --host 127.0.0.1", "test": "node --test tests/*.test.js", "test:browser": "playwright test" },
-  "engines": { "node": ">=22" },
-  "devDependencies": { "vite": "8.2.1", "@playwright/test": "1.62.1" }
+  "exports": {
+    ".": "./src/index.js",
+    "./engine": "./src/engine.js",
+    "./style.css": "./src/style.css",
+    "./randomize": "./src/randomize.js"
+  },
+  "files": [
+    "src",
+    "public",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/*.test.js",
+    "test:browser": "playwright test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "vite": "8.2.1",
+    "@playwright/test": "1.62.1"
+  }
 }

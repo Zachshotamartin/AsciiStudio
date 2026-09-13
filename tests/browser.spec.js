@@ -43,3 +43,20 @@ test('upload buttons open the matching picker and file-only drop feedback clears
  await page.locator('.ascii-upload').dispatchEvent('dragenter',{dataTransfer:await page.evaluateHandle(()=>{const d=new DataTransfer();d.setData('text/plain','text');return d;})});await expect(page.locator('.ascii-app')).not.toHaveClass(/ascii-dragging/);
  const transfer=await page.evaluateHandle(()=>{const d=new DataTransfer();d.items.add(new File(['fixture'],'example.png',{type:'image/png'}));return d;});await page.locator('.ascii-upload').dispatchEvent('dragenter',{dataTransfer:transfer});await expect(page.locator('.ascii-app')).toHaveClass(/ascii-dragging/);await page.keyboard.press('Escape');await expect(page.locator('.ascii-app')).not.toHaveClass(/ascii-dragging/);
 });
+
+for (const mode of ['donut', 'studio']) test(`Surprise me makes fresh settings without selecting a mood in ${mode}`, async ({page}) => {
+ await page.emulateMedia({reducedMotion:'reduce'});await ready(page,mode);
+ await page.evaluate(()=>{let seed=42;Math.random=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/2**32);});
+ const palettes=new Set();
+ for(let i=0;i<6;i++){
+  const before=await hash(page);
+  await page.getByRole('button',{name:'Surprise me',exact:true}).click();
+  await expect(page.locator('[data-preset][aria-pressed="true"]')).toHaveCount(0);
+  await expect.poll(()=>hash(page)).not.toBe(before);
+  palettes.add(await page.locator('[data-setting=ink]').inputValue());
+ }
+ expect(palettes.size).toBe(6);
+ await page.getByRole('button',{name:'Reset settings',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Terminal',exact:true})).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('[data-setting=ink]')).toHaveValue('#b9f4ba');
+});
