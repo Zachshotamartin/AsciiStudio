@@ -75,3 +75,9 @@ ffmpeg -f lavfi -i 'testsrc2=size=480x320:rate=24:duration=4' \
 ```
 
 The preview PNGs are exports from the actual ASCII renderer.
+
+### Keep a combination
+
+Rendering settings save automatically on this device, separately for the donut and media workspace. **Copy settings link** opens the same combination in another browser; it shares the controls only, never an uploaded image or video. If clipboard access is unavailable, a selectable link appears. **Undo surprise** restores the settings from immediately before the last randomization. Reset returns to the original recipe.
+
+Saved and shared values are versioned, validated, and bounded to the supported controls. The editor also works with local storage disabled.

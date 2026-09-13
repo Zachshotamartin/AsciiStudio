@@ -8,7 +8,8 @@
     ".": "./src/index.js",
     "./engine": "./src/engine.js",
     "./style.css": "./src/style.css",
-    "./randomize": "./src/randomize.js"
+    "./randomize": "./src/randomize.js",
+    "./settings": "./src/settings.js"
   },
   "files": [
     "src",
